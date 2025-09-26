@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slot Machine Quiz OSS - Con Suoni</title>
+  <meta name="description" content="Quiz OSS con slot machine, suoni e classifica locale">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Press Start 2P', Arial, sans-serif;
+      background: linear-gradient(180deg, #111, #000033);
+      color: #fff;
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    .stars { 
+      position: absolute; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      pointer-events: none; 
+    }
+    #game { 
+      text-align: center; 
+      width: 90vw; 
+      max-width: 700px; 
+      position: relative; 
+      z-index: 1;
+    }
+    #startScreen h1 { 
+      font-size: 2em; 
+      text-shadow: 0 0 10px cyan, 0 0 20px magenta, 0 0 40px yellow;
+      animation: titlePulse 2s infinite alternate;
+    }
+    @keyframes titlePulse {
+      0% { text-shadow: 0 0 10px cyan, 0 0 20px magenta, 0 0 40px yellow; }
+      100% { text-shadow: 0 0 20px cyan, 0 0 30px magenta, 0 0 50px yellow; }
+    }
+    button {
+      padding: 12px 25px; 
+      margin: 10px; 
+      font-size: 14px; 
+      cursor: pointer; 
+      border-radius: 5px; 
+      border: none;
+      font-family: 'Press Start 2P', Arial, sans-serif; 
+      background: #232323; 
+      color: gold;
+      transition: all 0.2s;
+    }
+    button:enabled:hover { 
+      transform: scale(1.08); 
+      box-shadow: 0 0 12px gold; 
+    }
+    button:disabled { 
+      opacity: 0.5; 
+      cursor: not-allowed; 
+    }
+    .correct { 
+      background-color: green !important; 
+      animation: correctGlow 0.6s infinite alternate;
+    }
+    .wrong { 
+      background-color: red !important;
+      animation: wrongShake 0.5s;
+    }
+    @keyframes correctGlow {
+      0% { box-shadow: 0 0 5px green; }
+      100% { box-shadow: 0 0 25px lime; }
+    }
+    @keyframes wrongShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    #quizScreen, #gameOverScreen { 
+      opacity: 0; 
+      display: none; 
+    }
+    #timer { 
+      font-size: 18px; 
+      margin-bottom: 10px;
+      color: gold;
+    }
+    #score, #combo { 
+      font-size: 16px; 
+      margin-top: 10px;
+    }
+    #combo {
+      color: lime;
+      font-weight: bold;
+    }
+    #progressBar { 
+      width: 100%; 
+      height: 10px; 
+      background: #333; 
+      margin-bottom: 15px; 
+      border-radius: 5px; 
+      overflow: hidden;
+    }
+    #progress { 
+      width: 100%; 
+      height: 100%; 
+      background: linear-gradient(to right, gold, orange, red); 
+      transition: width 1s linear;
+    }
+    #muteBtn { 
+      position: absolute; 
+      top: 10px; 
+      right: 10px; 
+      font-size: 16px; 
+      padding: 5px 8px; 
+      border: 2px solid #0ff; 
+      background: #00003a;
+    }
+    #rulli { 
+      display: flex; 
+      justify-content: center; 
+      gap: 14px; 
+      margin-top: 18px; 
+      position: relative;
+    }
+    .rullo { 
+      width: 60px; 
+      height: 60px; 
+      background: #222; 
+      border: 3px solid gold; 
+      border-radius: 10px; 
+      font-size: 36px;
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      color: gold; 
+      box-shadow: 0 0 10px #fff;
+      transition: all 0.1s;
+    }
+    .rullo.spinning {
+      animation: spin 0.1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotateY(0deg); }
+      100% { transform: rotateY(360deg); }
+    }
+    .luci { 
+      position: absolute; 
+      top: -10px; 
+      left: -10px; 
+      right: -10px; 
+      bottom: -10px; 
+      border-radius: 15px; 
+      pointer-events: none;
+    }
+    .luci.active {
+      animation: jackpotLights 0.2s infinite alternate;
+    }
+    @keyframes jackpotLights {
+      0% { box-shadow: 0 0 15px red, 0 0 25px blue, 0 0 35px green; }
+      100% { box-shadow: 0 0 25px yellow, 0 0 35px cyan, 0 0 45px magenta; }
+    }
+    .signature { 
+      font-size: 12px; 
+      margin-top: 10px; 
+      white-space: nowrap; 
+      overflow: hidden;
+    }
+    .signature span {
+      display: inline-block; 
+      padding-left: 90px; 
+      animation: scrollText 8s linear infinite, neonColors 2s infinite alternate;
+    }
+    @keyframes scrollText {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-80%); }
+    }
+    @keyframes neonColors {
+      0% { color: #0ff; }
+      40% { color: #f0f; }
+      60% { color: #0f0; }
+      80% { color: #ff0; }
+      100% { color: #0ff; }
+    }
+    #startBtn { 
+      font-size: 18px; 
+      color: gold; 
+      border: 3px solid cyan; 
+      background: radial-gradient(circle, rgba(255,215,0,0.7), transparent);
+      animation: startBtnPulse 1.5s infinite alternate;
+    }
+    @keyframes startBtnPulse {
+      0% { transform: scale(1); box-shadow: 0 0 10px cyan; }
+      100% { transform: scale(1.05); box-shadow: 0 0 20px cyan, 0 0 30px magenta; }
+    }
+    #gameOverScreen h2 { 
+      color: gold;
+      text-shadow: 0 0 10px cyan, 0 0 20px magenta;
+    }
+    #leaderboard {
+      margin-top: 12px; 
+      font-size: 12px;
+    }
+    .nameRow {
+      display: flex; 
+      gap: 7px; 
+      justify-content: center; 
+      align-items: center; 
+      flex-wrap: wrap;
+    }
+    .small {
+      font-size: 10px; 
+      opacity: 0.7;
+    }
+    input[type=text] {
+      font-family: 'Press Start 2P', Arial, sans-serif;
+      padding: 8px 10px;
+      border-radius: 5px;
+      border: 2px solid cyan;
+      background: #001;
+      color: #0ff;
+      outline: none;
+    }
+    input[type=text]:focus {
+      box-shadow: 0 0 10px cyan;
+    }
+    @media (max-width: 650px) {
+      .rullo {
+        width: 46px;
+        height: 46px;
+        font-size: 26px;
+      }
+      button {
+        font-size: 12px;
+        padding: 9px 14px;
+      }
+      #startScreen h1 {
+        font-size: 1.5em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="stars"></div>
+  <div id="game">
+    <!-- SCHERMATA INIZIALE -->
+    <div id="startScreen">
+      <h1>🎰 Slot Machine Quiz OSS 🎰</h1>
+      <button id="startBtn" onclick="startGame()">🎮 PREMI START 🎮</button>
+      <p class="signature"><span>⚡ Powered by Sossio Del Prete ⚡</span></p>
+    </div>
+
+    <!-- SCHERMATA QUIZ -->
+    <div id="quizScreen">
+      <button id="muteBtn" onclick="toggleMusic()">🎵</button>
+      <div id="timer">Tempo: 15</div>
+      <div id="progressBar"><div id="progress"></div></div>
+      <div id="questionArea"></div>
+      <div id="options"></div>
+      <div id="combo">Combo: 0</div>
+      <div id="rulli">
+        <div class="rullo" id="rullo1">🎰</div>
+        <div class="rullo" id="rullo2">🎰</div>
+        <div class="rullo" id="rullo3">🎰</div>
+        <div class="luci"></div>
+      </div>
+    </div>
+
+    <!-- SCHERMATA GAME OVER -->
+    <div id="gameOverScreen">
+      <h2>🏁 GAME OVER 🏁</h2>
+      <p id="finalScore"></p>
+      <div class="nameRow">
+        <input id="playerName" type="text" maxlength="16" placeholder="Il tuo nome">
+        <button id="saveBtn" onclick="submitScore()">💾 SALVA</button>
+        <span id="saveMsg" class="small"></span>
+      </div>
+      <button onclick="restartGame()">🔄 RIGIOCA</button>
+      <div id="leaderboard"></div>
+      <p class="small">🏆 Classifica locale del browser 🏆</p>
+    </div>
+  </div>
+
+  <script>
+    // Sistema Audio Integrato
+    class SoundSystem {
+      constructor() {
+        this.audioContext = null;
+        this.musicMuted = false;
+        this.initAudio();
+      }
+
+      initAudio() {
+        try {
+          this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+          console.warn('Web Audio API non supportata');
+        }
+      }
+
+      // Suono intro/start
+      playIntro() {
+        if (!this.audioContext || this.musicMuted) return;
+        this.createTone(523, 0.2, 'square'); // Do alto
+        setTimeout(() => this.createTone(659, 0.2, 'square'), 150); // Mi
+        setTimeout(() => this.createTone(784, 0.3, 'square'), 300); // Sol
+      }
+
+      // Suono risposta corretta
+      playCorrect() {
+        if (!this.audioContext || this.musicMuted) return;
+        this.createTone(880, 0.15, 'triangle'); // La
+        setTimeout(() => this.createTone(1100, 0.15, 'triangle'), 100); // Do#
+        setTimeout(() => this.createTone(1320, 0.2, 'triangle'), 200); // Mi alto
+      }
+
+      // Suono risposta sbagliata
+      playWrong() {
+        if (!this.audioContext || this.musicMuted) return;
+        this.createTone(220, 0.3, 'sawtooth'); // La basso
+        setTimeout(() => this.createTone(196, 0.4, 'sawtooth'), 200); // Sol
+      }
+
+      // Suono jackpot/combo
+      playJackpot() {
+        if (!this.audioContext || this.musicMuted) return;
+        for (let i = 0; i < 8; i++) {
+          setTimeout(() => {
+            const freq = 523 + (i * 100); // Scala ascendente
+            this.createTone(freq, 0.1, 'sine');
+          }, i * 50);
+        }
+      }
+
+      // Tick del timer
+      playTick() {
+        if (!this.audioContext || this.musicMuted) return;
+        this.createTone(800, 0.05, 'square');
+      }
+
+      // Generatore di toni base
+      createTone(frequency, duration, type = 'sine') {
+        if (!this.audioContext) return;
+
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+        oscillator.type = type;
+        
+        // Envelope per evitare click
+        gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+        gainNode.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration);
+        
+        oscillator.start(this.audioContext.currentTime);
+        oscillator.stop(this.audioContext.currentTime + duration);
+      }
+
+      toggleMute() {
+        this.musicMuted = !this.musicMuted;
+        return this.musicMuted;
+      }
+    }
+
+    // Domande del quiz OSS
+    const questions = [
+      { q: 'Dove vengono prodotte le piastrine?', options: ['Apparato digerente', 'Ghiandole', 'Nucleo delle cellule', 'Midollo osseo'], answer: 3 },
+      { q: 'Che cos\'è l\'anafilassi?', options: ['Reazione cutanea al calore', 'Reazione allergica da ipersensibilità', 'Procedura medica', 'Shock settico'], answer: 1 },
+      { q: 'Ordine corretto strati cutanei dall\'esterno all\'interno?', options: ['Derma, ipoderma, epidermide', 'Epidermide, ipoderma, derma', 'Epidermide, derma, ipoderma', 'Ipoderma, epidermide, derma'], answer: 2 },
+      { q: 'Quale organo produce insulina?', options: ['Fegato', 'Pancreas', 'Reni', 'Polmoni'], answer: 1 },
+      { q: 'Cosa significa “asepsi”?', options: ['Mancanza di batteri', 'Contatto con germi', 'Metodo chirurgico', 'Tipo di vaccino'], answer: 0 },
+      { q: 'Qual è la temperatura corporea normale in un adulto?', options: ['36-37 °C', '35 °C', '38-39 °C', '37.8 °C'], answer: 0 },
+      { q: 'Qual è la frequenza cardiaca normale in un adulto a riposo?', options: ['40-60 bpm', '60-100 bpm', '100-120 bpm', '30-50 bpm'], answer: 1 },
+      { q: 'Qual è la frequenza respiratoria normale in un adulto?', options: ['8-12 atti/minuto', '12-20 atti/minuto', '20-30 atti/minuto', '6-8 atti/minuto'], answer: 1 },
+      { q: 'Qual è il valore normale della pressione arteriosa?', options: ['90/60 mmHg', '120/80 mmHg', '140/100 mmHg', '160/90 mmHg'], answer: 1 },
+      { q: 'Che cos’è la febbre?', options: ['Temperatura corporea > 37.5 °C', 'Temperatura < 36 °C', 'Pressione alta', 'Battito accelerato'], answer: 0 },
+      { q: 'Quale presidio si usa per rilevare la pressione arteriosa?', options: ['Fonendoscopio', 'Sfigmomanometro', 'Termometro', 'Pulsossimetro'], answer: 1 },
+      { q: 'Cosa misura il saturimetro?', options: ['La temperatura', 'La saturazione di ossigeno', 'La pressione', 'Il glucosio'], answer: 1 },
+      { q: 'Che cos’è il catetere vescicale?', options: ['Tubo per ossigeno', 'Dispositivo per drenare urine', 'Cannula tracheale', 'Ago per flebo'], answer: 1 },
+      { q: 'Quale igiene è di competenza primaria dell’OSS?', options: ['Igiene ambientale e personale', 'Diagnosi medica', 'Somministrazione di terapie complesse', 'Prescrizione farmaci'], answer: 0 },
+      { q: 'Cosa si intende per igiene ambientale?', options: ['Pulizia degli ambienti di vita e cura', 'Lavaggio mani', 'Vaccinazione', 'Uso DPI'], answer: 0 },
+      { q: 'Che cos’è la disinfezione?', options: ['Eliminazione totale di tutti i microrganismi', 'Riduzione del numero di microrganismi patogeni', 'Pulizia superficiale', 'Uso di antibiotici'], answer: 1 },
+      { q: 'Che cos’è la sterilizzazione?', options: ['Pulizia meccanica', 'Eliminazione totale di tutti i microrganismi', 'Disinfezione parziale', 'Uso di acqua e sapone'], answer: 1 },
+      { q: 'Quale presidio si usa per prevenire le lesioni da decubito?', options: ['Cuscini antidecubito', 'Saturimetro', 'Fonendoscopio', 'Catetere'], answer: 0 },
+      { q: 'Ogni quanto tempo va cambiato il pannolone?', options: ['Solo una volta al giorno', 'Quando necessario', 'Ogni 12 ore', 'Ogni 3 giorni'], answer: 1 },
+      { q: 'Qual è la posizione di sicurezza in caso di perdita di coscienza?', options: ['Supina', 'Laterale di sicurezza', 'Seduta', 'Prona'], answer: 1 },
+      { q: 'Che cos’è il BLS?', options: ['Basic Life Support', 'Breve Lezione Sanitaria', 'Biologia Locale e Sociale', 'Base Legale Sanitaria'], answer: 0 },
+      { q: 'Come si chiama il battito accelerato del cuore?', options: ['Bradipnea', 'Tachicardia', 'Bradicardia', 'Dispnea'], answer: 1 },
+      { q: 'Come si chiama la difficoltà a respirare?', options: ['Apnea', 'Dispnea', 'Tachicardia', 'Febbre'], answer: 1 },
+      { q: 'Che cosa significa incontinenza urinaria?', options: ['Difficoltà respiratoria', 'Perdita involontaria di urine', 'Dolore muscolare', 'Mal di testa'], answer: 1 },
+      { q: 'Cosa sono le ADL (Activities of Daily Living)?', options: ['Attività della vita quotidiana', 'Procedure infermieristiche', 'Protocolli sanitari', 'Analisi cliniche'], answer: 0 },
+      { q: 'Qual è il corretto lavaggio delle mani?', options: ['5 secondi con acqua', '40-60 secondi con acqua e sapone', 'Solo acqua fredda', 'Asciugatura senza lavaggio'], answer: 1 },
+      { q: 'Quando l’OSS deve usare i guanti?', options: ['Sempre', 'Solo in caso di rischio contatto con liquidi biologici', 'Mai', 'Solo con pazienti anziani'], answer: 1 },
+      { q: 'Cosa significa DPI?', options: ['Dispositivo Protezione Individuale', 'Documento Professionale Internazionale', 'Dispositivo Pronto Intervento', 'Data Personale Integrata'], answer: 0 },
+      { q: 'Quale comportamento riduce la trasmissione di infezioni?', options: ['Lavaggio mani frequente', 'Indossare gioielli in reparto', 'Non usare mascherina', 'Scambiare camici'], answer: 0 },
+      { q: 'Che cos’è la comunicazione empatica?', options: ['Ascolto e comprensione dei bisogni del paziente', 'Solo dare ordini', 'Ignorare le emozioni', 'Rispondere velocemente'], answer: 0 },
+      { q: 'Chi prescrive i farmaci?', options: ['OSS', 'Infermiere', 'Medico', 'Familiare'], answer: 2 },
+      { q: 'Che cos’è la glicemia?', options: ['Livello di zuccheri nel sangue', 'Pressione arteriosa', 'Livello di ossigeno', 'Temperatura corporea'], answer: 0 },
+      { q: 'Qual è un segno di ipoglicemia?', options: ['Sudorazione, tremori, fame intensa', 'Sete eccessiva', 'Febbre alta', 'Dolore addominale'], answer: 0 },
+      { q: 'Qual è un segno di disidratazione?', options: ['Cute secca ed elastica', 'Cute umida', 'Pelle arrossata', 'Unghie fragili'], answer: 0 },
+      { q: 'Che cos’è la cartella clinica?', options: ['Documento amministrativo', 'Documento sanitario con storia del paziente', 'Ricetta medica', 'Scheda farmaci'], answer: 1 },
+      { q: 'Chi è responsabile legalmente della cartella clinica?', options: ['OSS', 'Infermiere', 'Medico', 'Paziente'], answer: 2 },
+      { q: 'Quale segnale indica infezione della ferita?', options: ['Cute fredda', 'Arrossamento, calore, pus', 'Ferita asciutta', 'Assenza di dolore'], answer: 1 },
+      { q: 'Come si chiama la difficoltà ad evacuare?', options: ['Diarrea', 'Stitichezza', 'Incontinenza', 'Flatulenza'], answer: 1 },
+      { q: 'Che cos’è la pediculosi?', options: ['Infezione virale', 'Infestazione da pidocchi', 'Malattia ossea', 'Allergia'], answer: 1 },
+      { q: 'Che cos’è la scabbia?', options: ['Infestazione da acari', 'Infezione batterica', 'Micosi', 'Allergia alimentare'], answer: 0 },
+      { q: 'Come si chiama la difficoltà a deglutire?', options: ['Afagia', 'Disfagia', 'Afonia', 'Apnea'], answer: 1 },
+      { q: 'Qual è il primo passo in caso di ustione?', options: ['Applicare ghiaccio diretto', 'Raffreddare con acqua corrente', 'Spalmare olio', 'Coprire con cotone'], answer: 1 },
+      { q: 'Che cos’è il triage?', options: ['Sistema di priorità in emergenza', 'Protocollo farmaci', 'Esame diagnostico', 'Tipo di medicazione'], answer: 0 },
+      { q: 'Quale dispositivo si usa per misurare la glicemia?', options: ['Glucometro', 'Saturimetro', 'Fonendoscopio', 'Termometro'], answer: 0 },
+      { q: 'Che cos’è la diarrea?', options: ['Emissione di feci liquide frequenti', 'Difficoltà a urinare', 'Febbre', 'Sudorazione eccessiva'], answer: 0 },
+      { q: 'Che cosa fa un OSS durante l’alimentazione assistita?', options: ['Somministra farmaci', 'Aiuta il paziente a mangiare', 'Prepara terapie', 'Compila cartella clinica'], answer: 1 },
+      { q: 'Che cosa indica la parola “dispnea”?', options: ['Difficoltà respiratoria', 'Battito lento', 'Sudorazione', 'Sete intensa'], answer: 0 },
+      { q: 'Che cos’è la tachipnea?', options: ['Respiro accelerato', 'Respiro lento', 'Battito irregolare', 'Crisi epilettica'], answer: 0 },
+      { q: 'Che cos’è l’anuria?', options: ['Assenza di urine', 'Eccesso di urine', 'Dolore urinario', 'Infezione renale'], answer: 0 },
+      { q: 'Che cos’è la pollachiuria?', options: ['Minzioni frequenti', 'Assenza di urine', 'Emissione di sangue', 'Dolore lombare'], answer: 0 }
+    ];
+
+    // Variabili di gioco
+    let currentQuestion = 0;
+    let score = 0;
+    let time = 15;
+    let timerInterval = null;
+    let combo = 0;
+    let leaderboard = [];
+    let soundSystem;
+
+    // Costanti
+    const MAX_LEADERBOARD = 20;
+    const STORAGE_KEY = "quizOSS_leaderboard";
+
+    // Inizializzazione
+    window.addEventListener('DOMContentLoaded', () => {
+      // Inizializza sistema audio
+      soundSystem = new SoundSystem();
+      
+      // Nascondi schermate non attive
+      document.getElementById('quizScreen').style.display = 'none';
+      document.getElementById('gameOverScreen').style.display = 'none';
+      
+      // Crea stelle di sfondo
+      createStars();
+      
+      // Carica classifica
+      loadLeaderboard();
+    });
+
+    // Funzioni utility
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function escapeHTML(str) {
+      const div = document.createElement('div');
+      div.textContent = str || '';
+      return div.innerHTML;
+    }
+
+    function cleanName(name) {
+      if (!name || typeof name !== 'string') return "Giocatore";
+      return name.trim().slice(0, 16).replace(/[<>]/g, '') || "Giocatore";
+    }
+
+    function createStars() {
+      const starsContainer = document.querySelector('.stars');
+      for (let i = 0; i < 50; i++) {
+        const star = document.createElement('div');
+        star.style.position = 'absolute';
+        star.style.width = '2px';
+        star.style.height = '2px';
+        star.style.background = '#fff';
+        star.style.borderRadius = '50%';
+        star.style.opacity = Math.random() * 0.5 + 0.2;
+        star.style.top = Math.random() * 100 + '%';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.animation = `twinkle ${2 + Math.random() * 3}s infinite`;
+        starsContainer.appendChild(star);
+      }
+    }
+
+    // Gestione localStorage per classifica locale
+    function loadLeaderboard() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        leaderboard = stored ? JSON.parse(stored) : [];
+        if (!Array.isArray(leaderboard)) leaderboard = [];
+      } catch (e) {
+        leaderboard = [];
+      }
+      renderLeaderboard();
+    }
+
+    function saveLeaderboard() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(leaderboard));
+      } catch (e) {
+        console.warn('Impossibile salvare la classifica');
+      }
+    }
+
+    function renderLeaderboard() {
+      const container = document.getElementById('leaderboard');
+      if (!container) return;
+
+      let html = "<h3>🏆 Classifica Locale 🏆</h3>";
+      if (leaderboard.length === 0) {
+        html += "<p class='small'>Nessun punteggio salvato ancora</p>";
+      } else {
+        html += "<ol>";
+        leaderboard.forEach((entry, index) => {
+          const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🏅";
+          html += `<li>${medal} ${escapeHTML(entry.name)} - ${entry.score}/${questions.length}</li>`;
+        });
+        html += "</ol>";
+      }
+      container.innerHTML = html;
+    }
+
+    // Funzioni di gioco principali
+    function startGame() {
+      // Effetti sonori e transizioni
+      soundSystem.playIntro();
+      
+      // Nascondi schermata iniziale
+      document.getElementById('startScreen').style.display = 'none';
+      
+      // Mostra schermata quiz
+      const quizScreen = document.getElementById('quizScreen');
+      quizScreen.style.display = 'block';
+      quizScreen.style.opacity = '1';
+
+      // Reset variabili
+      score = 0;
+      combo = 0;
+      currentQuestion = 0;
+      
+      // Mescola domande
+      shuffle(questions);
+      
+      // Carica prima domanda
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      if (currentQuestion >= questions.length) {
+        showScore();
+        return;
+      }
+
+      const question = questions[currentQuestion];
+      
+      // Aggiorna interfaccia
+      document.getElementById('questionArea').innerHTML = `<h2>❓ ${escapeHTML(question.q)}</h2>`;
+      
+      const optionsHtml = question.options.map((option, index) => 
+        `<button onclick="checkAnswer(${index}, this)">${escapeHTML(option)}</button>`
+      ).join('');
+      document.getElementById('options').innerHTML = optionsHtml;
+      
+      // Reset timer
+      time = 15;
+      updateTimerDisplay();
+      
+      // Avvia timer
+      clearInterval(timerInterval);
+      timerInterval = setInterval(updateTimer, 1000);
+    }
+
+    function updateTimer() {
+      time--;
+      updateTimerDisplay();
+      
+      // Suono tick negli ultimi 5 secondi
+      if (time <= 5 && time > 0) {
+        soundSystem.playTick();
+      }
+      
+      if (time <= 0) {
+        clearInterval(timerInterval);
+        wrongAnswer();
+      }
+    }
+
+    function updateTimerDisplay() {
+      const timerEl = document.getElementById('timer');
+      timerEl.textContent = `⏰ Tempo: ${time}`;
+      
+      // Cambia colore in base al tempo rimasto
+      if (time <= 5) {
+        timerEl.style.color = '#ff4444';
+      } else if (time <= 10) {
+        timerEl.style.color = '#ffaa44';
+      } else {
+        timerEl.style.color = 'gold';
+      }
+      
+      document.getElementById('progress').style.width = `${(time / 15) * 100}%`;
+    }
+
+    function checkAnswer(selectedIndex, button) {
+      clearInterval(timerInterval);
+      
+      // Disabilita tutti i pulsanti
+      const buttons = document.querySelectorAll('#options button');
+      buttons.forEach(btn => btn.disabled = true);
+      
+      const question = questions[currentQuestion];
+      
+      if (selectedIndex === question.answer) {
+        // Risposta corretta
+        button.classList.add('correct');
+        score++;
+        combo++;
+        soundSystem.playCorrect();
+        
+        document.getElementById('combo').textContent = `🔥 Combo: ${combo}`;
+        spinRulli(true);
+      } else {
+        // Risposta sbagliata
+        button.classList.add('wrong');
+        combo = 0;
+        soundSystem.playWrong();
+        
+        document.getElementById('combo').textContent = '💔 Combo: 0';
+        spinRulli(false);
+      }
+      
+      // Prossima domanda dopo delay
+      setTimeout(() => {
+        currentQuestion++;
+        loadQuestion();
+      }, 1200);
+    }
+
+    function wrongAnswer() {
+      combo = 0;
+      document.getElementById('combo').textContent = '⏰ Combo: 0';
+      soundSystem.playWrong();
+      
+      const buttons = document.querySelectorAll('#options button');
+      buttons.forEach(btn => btn.disabled = true);
+      
+      setTimeout(() => {
+        currentQuestion++;
+        loadQuestion();
+      }, 1200);
+    }
+
+    function showScore() {
+      clearInterval(timerInterval);
+      
+      // Nascondi schermata quiz
+      document.getElementById('quizScreen').style.display = 'none';
+      
+      // Mostra schermata game over
+      const gameOverScreen = document.getElementById('gameOverScreen');
+      gameOverScreen.style.display = 'block';
+      gameOverScreen.style.opacity = '1';
+      
+      // Mostra punteggio finale
+      document.getElementById('finalScore').textContent = `🎯 Punteggio: ${score}/${questions.length} (${Math.round((score/questions.length)*100)}%)`;
+      
+      // Carica classifica
+      loadLeaderboard();
+    }
+
+    function restartGame() {
+      // Reset interfaccia
+      document.getElementById('gameOverScreen').style.display = 'none';
+      document.getElementById('playerName').disabled = false;
+      document.getElementById('playerName').value = '';
+      document.getElementById('saveBtn').disabled = false;
+      document.getElementById('saveMsg').textContent = '';
+      
+      // Riavvia gioco
+      startGame();
+    }
+
+    function submitScore() {
+      const nameInput = document.getElementById('playerName');
+      const saveBtn = document.getElementById('saveBtn');
+      const saveMsg = document.getElementById('saveMsg');
+      
+      if (saveBtn.disabled) return;
+      
+      const playerName = cleanName(nameInput.value);
+      
+      // Aggiungi alla classifica
+      leaderboard.push({
+        name: playerName,
+        score: score,
+        timestamp: Date.now()
+      });
+      
+      // Ordina per punteggio (decrescente) e timestamp (crescente)
+      leaderboard.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.timestamp - b.timestamp;
+      });
+      
+      // Mantieni solo i migliori
+      leaderboard = leaderboard.slice(0, MAX_LEADERBOARD);
+      
+      // Salva e aggiorna display
+      saveLeaderboard();
+      renderLeaderboard();
+      
+      // Aggiorna interfaccia
+      saveBtn.disabled = true;
+      nameInput.disabled = true;
+      saveMsg.textContent = '✅ Salvato!';
+      
+      // Suono di conferma
+      soundSystem.playCorrect();
+    }
+
+    function spinRulli(isCorrect) {
+      const symbols = ['🍒', '🍋', '🍊', '⭐', '🔔', '💎', '🎰', '🎲', '🃏', '💰'];
+      const rullo1 = document.getElementById('rullo1');
+      const rullo2 = document.getElementById('rullo2');
+      const rullo3 = document.getElementById('rullo3');
+      const luci = document.querySelector('.luci');
+      
+      // Aggiungi classe spinning
+      rullo1.classList.add('spinning');
+      rullo2.classList.add('spinning');
+      rullo3.classList.add('spinning');
+      
+      let spins = 20;
+      const interval = setInterval(() => {
+        rullo1.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        rullo2.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        rullo3.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+        
+        spins--;
+        if (spins <= 0) {
+          clearInterval(interval);
+          
+          // Rimuovi classe spinning
+          rullo1.classList.remove('spinning');
+          rullo2.classList.remove('spinning');
+          rullo3.classList.remove('spinning');
+          
+          if (isCorrect && combo >= 3) {
+            // Jackpot effect
+            luci.classList.add('active');
+            soundSystem.playJackpot();
+            
+            // Ferma l'effetto dopo 2 secondi
+            setTimeout(() => {
+              luci.classList.remove('active');
+            }, 2000);
+          }
+        }
+      }, 60);
+    }
+
+    function toggleMusic() {
+      const muted = soundSystem.toggleMute();
+      const btn = document.getElementById('muteBtn');
+      if (btn) {
+        btn.textContent = muted ? '🔇' : '🎵';
+        btn.title = muted ? 'Attiva suoni' : 'Disattiva suoni';
+      }
+    }
+
+    // Aggiungi effetto twinkle alle stelle
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes twinkle {
+        0%, 100% { opacity: 0.2; }
+        50% { opacity: 0.8; }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+</body>
+</html>
+
